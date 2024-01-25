@@ -1,7 +1,18 @@
-# Use continuumio/anaconda3 as base image
-FROM continuumio/anaconda3:main
+# Use cuda as base image
+FROM nvidia/cuda:11.0.3-runtime-ubuntu20.04
 
-COPY . .
+# Install wget and other system tools
+RUN apt-get update && apt-get install -y wget
+
+# RUN apt-get update && apt-get install -y libgl1-mesa-glx
+
+# Download and install Anaconda
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2020.07-Linux-x86_64.sh -O /tmp/anaconda.sh \
+    && /bin/bash /tmp/anaconda.sh -b -p /opt/conda \
+    && rm /tmp/anaconda.sh
+
+# Add conda command into variable PATH
+ENV PATH /opt/conda/bin:$PATH
 
 # Create conda env
 RUN conda create -n ASRR python=3.10 -y
@@ -9,38 +20,22 @@ RUN conda create -n ASRR python=3.10 -y
 # execute following commands under conda env instead of default shell env
 SHELL ["conda", "run", "-n", "ASRR", "/bin/bash", "-c"]
 
+
+
+
 RUN chmod 1777 /tmp
-
-RUN apt-get update && apt-get install -y libgl1-mesa-glx
-
-# 安装依赖和工具
-RUN apt-get update && apt-get install -y wget gnupg software-properties-common
-
-# 添加 NVIDIA GPG key
-RUN apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
-
-# 添加 CUDA 存储库
-RUN add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
-RUN add-apt-repository "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/ /"
-
-# 安装 CUDA 和 cuDNN
-RUN apt-get update && apt-get install -y cuda cudnn
 
 # 安装 libgl1-mesa-glx
 RUN apt-get install -y libgl1-mesa-glx
+RUN apt-get update && apt-get install -y libglib2.0-0
 
-# 设置环境变量
-ENV PATH /usr/local/cuda/bin:$PATH
-ENV LD_LIBRARY_PATH /usr/local/cuda/lib64:$LD_LIBRARY_PATH
-
+COPY . .
 
 # Install Pytorch we use:
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# Install Other packages:
 RUN pip install -r requirements.txt
 
 RUN echo "ALL parts finished!"
 
-CMD ["conda", "run", "-n", "ASRR", "python", "inference.py"]
-
+# CMD ["conda", "run", "-n", "ASRR", "python", "inference.py"]
